@@ -1,0 +1,33 @@
+asset_001:
+  asset: "24K Gold"
+  description: "Pure 24K gold bar for investment purposes"
+  asset_class: "Precious Metals"
+  industry: "Commodities"
+  market: "Global"
+  quantity: 10
+  investment_unit: gram
+  buy_price_per_unit: 90
+  currency: SGD
+  date: "2024-01-15"
+asset_002:
+  asset: "Vanguard Information Technology Index Fund VGT ETF"
+  description: "ETF focusing on technology sector stocks"
+  asset_class: "Exchange Traded Funds"
+  industry: "Technology"
+  market: "US"
+  quantity: 10
+  investment_unit: share
+  buy_price_per_unit: 550
+  currency: USD
+  date: "2024-07-15"
+asset_003:
+  asset: "24K Gold"
+  description: "Pure 24K gold bar for investment purposes"
+  asset_class: "Precious Metals"
+  industry: "Commodities"
+  market: "Global"
+  quantity: 50
+  investment_unit: gram
+  buy_price_per_unit: 180
+  currency: SGD
+  date: "2025-12-15"
