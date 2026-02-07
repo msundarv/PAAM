@@ -2,7 +2,7 @@ import yaml
 import operator
 from pydantic import Field
 from typing import Annotated
-from typing import List, Literal
+from typing import List
 from data_models import Asset, AssetPriceInfo
 from tools import load_search_tool
 from langchain_openai import ChatOpenAI
@@ -10,8 +10,7 @@ from langgraph.graph import MessagesState
 from langgraph.graph import START, END, StateGraph
 from langgraph.types import Send
 from langchain.agents import create_agent
-from langgraph.prebuilt import ToolNode
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 
 
 class OverallPricePulseState(MessagesState):
@@ -31,8 +30,8 @@ class IndividualPricePulseState(MessagesState):
     """
 
     asset: Asset = Field(description="The asset to gather price for.")
-    tool_use_count: int = Field(
-        default=0, description="Number of times tools have been used."
+    search_response: dict | None = Field(
+        default=None, description="The response from the search tool."
     )
     asset_prices: Annotated[list[AssetPriceInfo], operator.add] = Field(
         default=[], description="List of gathered asset price information."
@@ -66,9 +65,6 @@ class PricePulseGraph:
         with open(instructions_yml_file, "r") as f:
             instructions_data = yaml.safe_load(f)
 
-        self.price_pulse_gather_instructions = instructions_data[
-            "price_pulse_gather_instructions"
-        ]
         self.price_pulse_summarize_instructions = instructions_data[
             "price_pulse_summarize_instructions"
         ]
@@ -81,7 +77,7 @@ class PricePulseGraph:
         Returns:
             None
         """
-        self.tools = [load_search_tool(time_range="week")]
+        self.search_tool = load_search_tool(time_range="week")
         return None
 
     def contruct_graph(self) -> StateGraph:
@@ -99,12 +95,10 @@ class PricePulseGraph:
         individual_price_pulse_graph.add_node(
             "summarize_asset_price", self.summarize_asset_price
         )
-        individual_price_pulse_graph.add_node("tools", ToolNode(self.tools))
         individual_price_pulse_graph.add_edge(START, "gather_asset_price")
-        individual_price_pulse_graph.add_conditional_edges(
-            "gather_asset_price", self.is_tool_use_needed
+        individual_price_pulse_graph.add_edge(
+            "gather_asset_price", "summarize_asset_price"
         )
-        individual_price_pulse_graph.add_edge("tools", "gather_asset_price")
         individual_price_pulse_graph.add_edge("summarize_asset_price", END)
 
         # Construct overall price pulse graph
@@ -137,7 +131,7 @@ class PricePulseGraph:
         for asset in state["assets"]:
             asset_state = IndividualPricePulseState(
                 asset=asset,
-                tool_use_count=0,
+                search_response=None,
             )
             asset_states.append(asset_state)
 
@@ -157,33 +151,18 @@ class PricePulseGraph:
             IndividualPricePulseState: The updated state with gathered asset price.
         """
 
-        llm_copy = self.llm.bind_tools(self.tools, parallel_tool_calls=False)
-        instructions = self.price_pulse_gather_instructions.format(
-            asset=state["asset"].asset,
-            description=state["asset"].description,
-            asset_class=state["asset"].asset_class,
-            industry=state["asset"].industry,
-            market=state["asset"].market,
-            investment_unit=state["asset"].investment_unit,
-            currency=state["asset"].currency,
+        search_query = (
+            "What is the current price of "
+            + state["asset"].asset
+            + " per "
+            + state["asset"].investment_unit
+            + " in "
+            + state["asset"].currency
+            + "?"
         )
-        human_msg = HumanMessage(
-            content="Please gather the current unit price information."
-        )
-        sys_msg = SystemMessage(content=instructions)
+        search_response = self.search_tool.run(search_query)
 
-        message = llm_copy.invoke([sys_msg] + state["messages"] + [human_msg])
-
-        tool_usage = state["tool_use_count"]
-        if message.tool_calls:
-            tool_usage = tool_usage + 1
-
-        if tool_usage >= 5:
-            message = AIMessage(
-                content="Maximum tool usage reached. Proceeding to summarize the current price."
-            )
-
-        return {"messages": [message], "tool_use_count": tool_usage}
+        return {"search_response": search_response}
 
     def summarize_asset_price(
         self,
@@ -206,6 +185,7 @@ class PricePulseGraph:
             market=state["asset"].market,
             investment_unit=state["asset"].investment_unit,
             currency=state["asset"].currency,
+            search_result=state["search_response"],
         )
         human_msg = HumanMessage(
             content="Please summarize the information you have gathered so far."
@@ -217,21 +197,3 @@ class PricePulseGraph:
         return {
             "asset_prices": [message],
         }
-
-    def is_tool_use_needed(
-        self,
-        state: IndividualPricePulseState,
-    ) -> Literal["tools", "summarize_asset_price"]:
-        """
-        Determines whether to use any tool or proceed to next step.
-        Args:
-            state (IndividualPricePulseState): The current state of the agent.
-        Returns:
-            Literal: Decision on the next step.
-        """
-
-        last_msg = state["messages"][-1]
-        if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
-            return "tools"
-
-        return "summarize_asset_price"
