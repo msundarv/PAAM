@@ -21,6 +21,17 @@ asset_002:
   currency: USD
   date: "2024-07-15"
 asset_003:
+  asset: "CapitaLand Integrated Commercial Trust"
+  description: "REITs focused on commercial properties in Singapore"
+  asset_class: "REITs"
+  industry: "Real Estate"
+  market: "Singapore"
+  quantity: 1000
+  investment_unit: share
+  buy_price_per_unit: 1.98
+  currency: SGD
+  date: "2022-12-15"
+asset_004:
   asset: "24K-999 Gold"
   description: "Pure 24K gold bar for investment purposes"
   asset_class: "Precious Metals"
