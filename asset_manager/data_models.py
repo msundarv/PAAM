@@ -26,5 +26,16 @@ class AssetPriceInfo(Asset):
 
     current_unit_price: float = Field(description="The current unit price of the asset")
     price_source: list[str] = Field(
-        description="Source from which the current unit price was obtained"
+        description="Links to the source from which the current unit price was obtained"
+    )
+
+
+class AssetNewsInfo(Asset):
+    """
+    Extends Asset class to include news information.
+    """
+
+    news: str = Field(description="Summarized news about the asset")
+    news_source: list[str] = Field(
+        description="Links to the source from which the news information was obtained"
     )

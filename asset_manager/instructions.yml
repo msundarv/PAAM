@@ -11,3 +11,18 @@ price_pulse_summarize_instructions: |
       Search Result: {search_result}
 
       If the price could not be found, indicate that the price as -1.
+
+asset_news_summarize_instructions: |
+      You have gathered the latest news for the following asset. Now, summarize the most recent news along with the source of your information.
+
+      Asset Name: {asset}
+      Description: {description}
+      Asset Class: {asset_class}
+      Industry: {industry}
+      Market: {market}
+      Unit: {investment_unit}
+      Currency: {currency}
+
+      Search Result: {search_result}
+
+      If no news could be found, indicate that there is no news available.
