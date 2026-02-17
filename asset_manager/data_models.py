@@ -39,3 +39,23 @@ class AssetNewsInfo(Asset):
     news_source: list[str] = Field(
         description="Links to the source from which the news information was obtained"
     )
+
+
+class FedWatchInfo(BaseModel):
+    """
+    Represents the information about the Federal Reserve's interest rate decisions.
+    """
+
+    current_fed_rate: float = Field(
+        description="The current federal funds rate in percentage"
+    )
+    next_meeting_date: str = Field(description="The date of the next FOMC meeting")
+    expected_rate_change: str = Field(
+        description="Market expectations for the next rate change (e.g., 'No Change', 'Increase', 'Decrease')"
+    )
+    personal_finance_impact: str = Field(
+        description="Summary of how the current federal funds rate impacts personal finance and investments"
+    )
+    source: list[str] = Field(
+        description="Links to the source from which the federal funds rate information was obtained"
+    )

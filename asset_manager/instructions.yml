@@ -26,3 +26,12 @@ asset_news_summarize_instructions: |
       Search Result: {search_result}
 
       If no news could be found, indicate that there is no news available.
+
+fed_watch_summarize_instructions: |
+      You have gathered the latest information about fed rate changes. Now, summarize the most recent information along with the source of your information.
+
+      My Assets: {assets}
+      Basic Search Result: {basic_search_result}
+      Expectations Search Result: {expectations_search_result}
+
+      If no information could be found, indicate that there is no information available.
