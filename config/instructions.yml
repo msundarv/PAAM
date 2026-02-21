@@ -10,7 +10,7 @@ price_pulse_summarize_instructions: |
 
       Search Result: {search_result}
 
-      If the price could not be found, indicate that the price as -1.
+      If the price could not be found, indicate that the price as -1. Format the source information as a list of URL sources comma separated if available.
 
 asset_news_summarize_instructions: |
       You have gathered the latest news for the following asset. Now, summarize the most recent news along with the source of your information.
@@ -25,7 +25,7 @@ asset_news_summarize_instructions: |
 
       Search Result: {search_result}
 
-      If no news could be found, indicate that there is no news available.
+      If no news could be found, indicate that there is no news available. Format the news summary as a list of news items in markdown format if available.
 
 fed_watch_summarize_instructions: |
       You have gathered the latest information about fed rate changes. Now, summarize the most recent information along with the source of your information.
@@ -34,4 +34,4 @@ fed_watch_summarize_instructions: |
       Basic Search Result: {basic_search_result}
       Expectations Search Result: {expectations_search_result}
 
-      If no information could be found, indicate that there is no information available.
+      If no information could be found, indicate that there is no information available. Format the summary as a list of key points in markdown format if available.

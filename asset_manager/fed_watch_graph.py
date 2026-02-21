@@ -1,12 +1,16 @@
 import yaml
+from pathlib import Path
 from pydantic import Field
 from typing import List
-from data_models import FedWatchInfo
-from tools import load_search_tool
+from .data_models import FedWatchInfo
+from .tools import load_search_tool
 from langchain_openai import ChatOpenAI
 from langgraph.graph import MessagesState
 from langgraph.graph import START, END, StateGraph
 from langchain_core.messages import HumanMessage, SystemMessage
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+CONFIG_DIR = BASE_DIR / "config"
 
 
 class FedWatchState(MessagesState):
@@ -35,7 +39,7 @@ class FedWatchGraph:
 
     def __init__(
         self,
-        instructions_yml_file: str = "./instructions.yml",
+        instructions_yml_file: str = CONFIG_DIR / "instructions.yml",
         model_name: str = "gpt-5-mini",
     ):
         self.load_instructions(instructions_yml_file)
