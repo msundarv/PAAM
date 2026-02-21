@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 
 from asset_manager.data_models import Asset
 from asset_manager.price_pulse_graph import PricePulseGraph, OverallPricePulseState
+from asset_manager.asset_news_graph import AssetNewsGraph, OverallAssetNewsState
+from asset_manager.fed_watch_graph import FedWatchGraph, FedWatchState
 
 
 def load_assets(yml_file_path="data/assets.yml") -> pd.DataFrame:
@@ -88,6 +90,8 @@ def filter_unique_assets(
     # Place holder columns for agent results
     unique_assets["current_unit_price"] = "NA"
     unique_assets["price_sources"] = "NA"
+    unique_assets["news"] = "NA"
+    unique_assets["news_sources"] = "NA"
 
     return unique_assets
 
@@ -322,7 +326,7 @@ def get_current_value() -> None:
 
     price_pulse_result = None
 
-    if st.button("Run Price Pulse Agent", icon="🏷️"):
+    if st.button("Run Price Pulse Agent", icon="▶️"):
 
         with st.spinner("Running Price Pulse Agent..."):
             try:
@@ -360,6 +364,176 @@ def get_current_value() -> None:
     return None
 
 
+def load_asset_news_state() -> OverallAssetNewsState:
+    """
+    Load the state for the asset news agent.
+    Returns:
+        OverallAssetNewsState: Initial state of the asset news agent.
+    """
+
+    unique_assets = st.session_state.get("unique_assets")
+
+    asset_list = []
+    for row in unique_assets.to_dict(orient="records"):
+        try:
+            asset_list.append(Asset(**row))
+        except TypeError:
+            asset_list.append(row)
+
+    return OverallAssetNewsState(assets=asset_list)
+
+
+def get_latest_asset_news() -> None:
+    """
+    Run asset news agent to get latest news for each asset.
+    """
+
+    asset_news_result = None
+
+    if st.button("Run Asset News Agent", icon="▶️"):
+
+        with st.spinner("Running Asset News Agent..."):
+            try:
+                asset_news_state = load_asset_news_state()
+                asset_news_graph = AssetNewsGraph().contruct_graph().compile()
+                thread = {"configurable": {"thread_id": random.randint(0, 9999)}}
+
+                # Run the asset news agent and stream results
+                for chunk in asset_news_graph.stream(
+                    asset_news_state, thread=thread, stream_mode="values"
+                ):
+                    if "asset_news" in chunk:
+                        asset_news_result = chunk["asset_news"]
+
+                # Populate the asset news results
+                if asset_news_result:
+                    for asset_news in asset_news_result:
+                        st.session_state["unique_assets"].loc[
+                            st.session_state["unique_assets"]["asset"]
+                            == asset_news.asset,
+                            "news",
+                        ] = asset_news.news
+                        st.session_state["unique_assets"].loc[
+                            st.session_state["unique_assets"]["asset"]
+                            == asset_news.asset,
+                            "news_sources",
+                        ] = ", ".join(asset_news.news_source)
+
+                        st.session_state["is_asset_news_agent_completed"] = True
+            except Exception as e:
+                st.error(f"Error running Asset News Agent: {e}", icon="🚨")
+
+    return None
+
+
+def display_news() -> None:
+    """
+    Display the latest news for each asset.
+    """
+
+    if st.session_state.get("is_asset_news_agent_completed"):
+
+        news_df = (
+            st.session_state["unique_assets"][["asset", "news"]]
+            .rename(
+                columns={
+                    "asset": "Asset",
+                    "news": "Latest News",
+                }
+            )
+            .set_index("Asset")
+        )
+        st.table(news_df)
+
+        with st.expander("📝 See News Sources", expanded=False):
+            news_sources_df = (
+                st.session_state["unique_assets"][["asset", "news_sources"]]
+                .rename(
+                    columns={
+                        "asset": "Asset",
+                        "news_sources": "News Sources",
+                    }
+                )
+                .set_index("Asset")
+            )
+            st.table(news_sources_df)
+
+    return None
+
+
+def get_fed_watch_result() -> None:
+    """
+    Run fed watch agent to get the latest fed watch result.
+    """
+
+    fed_watch_result = None
+
+    if st.button("Run Fed Watch Agent", icon="▶️"):
+
+        with st.spinner("Running Fed Watch Agent..."):
+            try:
+                fed_watch_state = FedWatchState(
+                    assets=st.session_state.get("unique_assets")["asset"].tolist()
+                )
+                fed_watch_graph = FedWatchGraph().contruct_graph().compile()
+                thread = {"configurable": {"thread_id": random.randint(0, 9999)}}
+
+                # Run the fed watch agent and stream results
+                for chunk in fed_watch_graph.stream(
+                    fed_watch_state, thread=thread, stream_mode="values"
+                ):
+                    if "fed_watch_info" in chunk:
+                        fed_watch_result = chunk["fed_watch_info"][0]
+
+                # Populate the fed watch result
+                if fed_watch_result:
+                    st.session_state["fed_watch_result"] = fed_watch_result
+
+            except Exception as e:
+                st.error(f"Error running Fed Watch Agent: {e}", icon="🚨")
+
+    return None
+
+
+def display_fed_watch_result() -> None:
+    """
+    Display the latest fed watch result.
+    """
+
+    if st.session_state.get("fed_watch_result"):
+
+        fed_watch_info = st.session_state["fed_watch_result"]
+        impact_text = fed_watch_info.personal_finance_impact
+        impact_lines = impact_text.split("\n")
+        if len(impact_lines) > 1:
+            impact_text = (
+                impact_lines[0]
+                + "\n"
+                + "\n".join(["> " + line for line in impact_lines[1:]])
+            )
+
+        st.markdown(
+            f"""
+            - ***Current Fed Rate***: {fed_watch_info.current_fed_rate}
+            
+            \n- ***Next Meeting Date***: {fed_watch_info.next_meeting_date}
+            
+            \n- ***Expected Rate Change***: {fed_watch_info.expected_rate_change}
+            
+            \n- ***Impact***:\n> {impact_text}
+            """
+        )
+
+    with st.expander("📝 See Fed Watch Sources", expanded=False):
+        if st.session_state.get("fed_watch_result"):
+            fed_watch_info = st.session_state["fed_watch_result"]
+            sources = fed_watch_info.source
+            sources_md = "\n".join([f"- {source}" for source in sources])
+            st.markdown(sources_md)
+
+    return None
+
+
 st.set_page_config(page_title="PAAM", layout="wide", page_icon="🤖")
 st.title("🗠 PAAM - Personal AI Asset Manager")
 
@@ -374,6 +548,8 @@ if st.session_state.get("assets") is None:
             st.session_state["assets"]
         )
         st.session_state["is_pulse_agent_completed"] = False
+        st.session_state["is_asset_news_agent_completed"] = False
+        st.session_state["fed_watch_result"] = None
     except Exception as e:
         st.error(f"Error processing assets data: {e}", icon="🚨")
 
@@ -381,17 +557,19 @@ if st.session_state.get("assets") is None:
 if st.session_state.get("assets") is not None:
 
     # Portfolio Overview
-    st.subheader("📊 Portfolio Overview", divider=True)
+    st.subheader("📊 Portfolio Overview", divider="blue")
     get_current_value()
     display_portfolio()
 
     # Asset News
-    st.subheader("📰 Latest Asset News", divider=True)
-    # TODO: Add Asset News Agent
+    st.subheader("📰 Latest Asset News", divider="blue")
+    get_latest_asset_news()
+    display_news()
 
     # Fed Watch
-    st.subheader("🏦 Fed Watch", divider=True)
-    # TODO: Add Fed Watch Agent
+    st.subheader("🏦 Fed Watch", divider="blue")
+    get_fed_watch_result()
+    display_fed_watch_result()
 
 else:
     st.warning("No assets data available to display.", icon="⚠️")
