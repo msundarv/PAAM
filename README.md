@@ -14,7 +14,7 @@ pip install -r requirements.txt
 ## Config
 
 1. Create a `.env` file in the project root directory by copying `.env.example` and adding your required API keys and credentials.
-2. Define your assets in `/data/assets.yml` following the schema provided in the example file.
+2. Define your assets in `/data/my_assets.yml` following the schema provided in the example file `sample_assets.yml`.
 
 ## Quick Start
 

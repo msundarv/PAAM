@@ -10,7 +10,7 @@ from asset_manager.asset_news_graph import AssetNewsGraph, OverallAssetNewsState
 from asset_manager.fed_watch_graph import FedWatchGraph, FedWatchState
 
 
-def load_assets(yml_file_path="data/assets.yml") -> pd.DataFrame:
+def load_assets(yml_file_path="data/my_assets.yml") -> pd.DataFrame:
     """
     Load assets from a YAML file and return them as a DataFrame.
     Args:
