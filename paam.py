@@ -3,11 +3,32 @@ import random
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
+from matplotlib import pyplot as plt
+
+from currency_converter import CurrencyConverter, SINGLE_DAY_ECB_URL
 
 from asset_manager.data_models import Asset
 from asset_manager.price_pulse_graph import PricePulseGraph, OverallPricePulseState
 from asset_manager.asset_news_graph import AssetNewsGraph, OverallAssetNewsState
 from asset_manager.fed_watch_graph import FedWatchGraph, FedWatchState
+
+
+def load_app_config(yml_file_path="config/app_config.yml") -> dict:
+    """
+    Load application configuration from a YAML file.
+    Args:
+        yml_file_path (str): The path to the YAML file containing app configuration.
+    Returns:
+        dict: A dictionary containing the application configuration.
+    """
+
+    app_config = None
+
+    # Load app configuration from YAML file
+    with open(yml_file_path, "r") as file:
+        app_config = yaml.safe_load(file)
+
+    return app_config
 
 
 def load_assets(yml_file_path="data/my_assets.yml") -> pd.DataFrame:
@@ -103,7 +124,7 @@ def populate_portfolio_cols(
     current_price_col="current_unit_price",
 ) -> pd.DataFrame:
     """
-    Populate additional columns in the DataFrame based on quantity, buy price, and current price.
+    Populate additional columns to the portfolio DataFrame based on quantity, buy price, and current price.
     Args:
         data_df (pd.DataFrame): The DataFrame to populate.
         quantity_col (str): The name of the column containing quantity information.
@@ -196,6 +217,12 @@ def highlight_portfolio_rows(row) -> list:
     Returns:
         list: A list of styles to apply to the row.
     """
+
+    # If the agent has not yet populated the unrealized gain/loss percentage, do not apply any highlighting
+    value = row["Current Unit Price"]
+    if value.split()[0] == "-1":
+        return [""] * len(row)
+
     value = row["Unrealized P/L %"]
     if isinstance(value, str):
         value = float(value.rstrip("%"))
@@ -206,10 +233,118 @@ def highlight_portfolio_rows(row) -> list:
     return [""] * len(row)
 
 
+def display_portfolio_aggregate() -> None:
+    """
+    Display aggregated portfolio metrics.
+    """
+
+    # Prepare the data for aggregate metrics calculation and visualization
+    data_df = st.session_state.get("unique_assets").copy()
+    base_currency = st.session_state.get("app_config", {}).get("base_currency", "USD")
+    currency_col = "currency"
+    value_cols = ["buy_price_per_unit"]
+    # Add additional value columns from price pulse agent results if available
+    if st.session_state.get("is_pulse_agent_completed"):
+        value_cols.extend(["current_unit_price"])
+
+    # Convert all values to base currency using the currency converter if they are not already in base currency
+    if data_df is not None and not data_df.empty and currency_col in data_df.columns:
+        for idx, row in data_df.iterrows():
+            if row.get(currency_col) != base_currency:
+                # Convert relevant numeric columns
+                for col in value_cols:
+                    if col in data_df.columns and pd.notna(row[col]):
+                        converted_value = st.session_state["converter"].convert(
+                            row[col], row.get(currency_col), base_currency
+                        )
+                        data_df.at[idx, col] = converted_value
+                # Update currency column
+                data_df.at[idx, "currency"] = base_currency
+    else:
+        st.warning(
+            "No data available to display aggregated portfolio metrics.", icon="⚠️"
+        )
+        return None
+
+    # Display warning if the price pulse agent couldn't retrieve current prices for any assets
+    if (
+        st.session_state.get("is_pulse_agent_completed")
+        and (data_df["current_unit_price"] == -1).any()
+    ):
+        st.warning(
+            "Agent was unable to retrieve current prices for some assets. Please note that these assets will not be included in the Total Portfolio Value and Overall P/L % metrics.",
+            icon="⚠️",
+        )
+
+    st.space(size="small")
+    _, col1, _, col2, _ = st.columns([1, 2, 1, 2, 1])
+    with col1:
+        # Total Cost Metric
+        total_cost = (data_df["quantity"] * data_df["buy_price_per_unit"]).sum()
+        st.metric(
+            "Total Portfolio Cost", f"{total_cost:,.0f} {base_currency}", border=True
+        )
+
+        # Total Value Metric
+        if st.session_state.get("is_pulse_agent_completed"):
+            total_value = (data_df["quantity"] * data_df["current_unit_price"]).sum()
+            st.metric(
+                "Total Portfolio Value",
+                f"{total_value:,.0f} {base_currency}",
+                border=True,
+            )
+        else:
+            st.metric("Total Portfolio Value", "NA", border=True)
+
+        # Overall P/L % Metric
+        overall_gain_loss_percentage = (
+            (total_value - total_cost) / total_cost * 100
+            if st.session_state.get("is_pulse_agent_completed") and total_cost != 0
+            else None
+        )
+        st.metric(
+            "Overall P/L %",
+            (
+                f"{overall_gain_loss_percentage:.0f}%"
+                if overall_gain_loss_percentage is not None
+                else "NA"
+            ),
+            border=True,
+        )
+
+    with col2:
+
+        # Asset class distribution pie chart
+        if not data_df.empty:
+            asset_class_distribution = (
+                data_df.groupby("asset_class")
+                .apply(lambda x: (x["quantity"] * x["buy_price_per_unit"]).sum())
+                .reset_index(name="cost")
+            )
+            fig, ax = plt.subplots()
+            ax.figure.set_size_inches(2, 2)
+            ax.pie(
+                asset_class_distribution["cost"],
+                labels=asset_class_distribution["asset_class"],
+                autopct="%1.1f%%",
+                colors=plt.get_cmap("tab20").colors[: len(asset_class_distribution)],
+                textprops={"fontsize": 8},
+            )
+            ax.axis("equal")
+            st.pyplot(fig, use_container_width=True)
+
+    st.space(size="small")
+
+    return None
+
+
 def display_portfolio() -> None:
     """
     Display the portfolio of assets.
     """
+
+    # Display aggregated portfolio metrics
+    display_portfolio_aggregate()
 
     # Clean up the DataFrame
     # Populate additional columns if price pulse agent has completed
@@ -357,6 +492,18 @@ def get_current_value() -> None:
                         ] = ", ".join(asset_price.price_source)
 
                         st.session_state["is_pulse_agent_completed"] = True
+
+                    # Replace if any current unit price is still NA with '-1' after agent run with buy price as a fallback
+                    st.session_state["unique_assets"][
+                        "current_unit_price"
+                    ] = st.session_state["unique_assets"].apply(
+                        lambda row: (
+                            -1
+                            if row["current_unit_price"] == "NA"
+                            else row["current_unit_price"]
+                        ),
+                        axis=1,
+                    )
 
             except Exception as e:
                 st.error(f"Error running Price Pulse Agent: {e}", icon="🚨")
@@ -543,16 +690,17 @@ if st.session_state.get("assets") is None:
     load_dotenv()
 
     try:
+        st.session_state["app_config"] = load_app_config()
+        st.session_state["converter"] = CurrencyConverter(SINGLE_DAY_ECB_URL)
         st.session_state["assets"] = load_assets()
         st.session_state["unique_assets"] = filter_unique_assets(
             st.session_state["assets"]
         )
         st.session_state["is_pulse_agent_completed"] = False
         st.session_state["is_asset_news_agent_completed"] = False
-        st.session_state["fed_watch_result"] = None
+        st.session_state["fed_watch_result"] = False
     except Exception as e:
         st.error(f"Error processing assets data: {e}", icon="🚨")
-
 
 if st.session_state.get("assets") is not None:
 
