@@ -682,7 +682,7 @@ def display_fed_watch_result() -> None:
 
 
 st.set_page_config(page_title="PAAM", layout="wide", page_icon="🤖")
-st.title("🗠 PAAM - Personal AI Asset Manager")
+st.title("PAAM - Personal AI Asset Manager")
 
 # Load page level data into session state if not already loaded
 if st.session_state.get("assets") is None:
