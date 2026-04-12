@@ -272,17 +272,17 @@ def display_portfolio_aggregate() -> None:
         and (data_df["current_unit_price"] == -1).any()
     ):
         st.warning(
-            "Agent was unable to retrieve current prices for some assets. Please note that these assets will not be included in the Total Portfolio Value and Overall P/L % metrics.",
+            "Agent was unable to retrieve current prices for some assets. Please note that these assets will not be included in the portfolio summary metrics.",
             icon="⚠️",
         )
 
     st.space(size="small")
-    _, col1, _, col2, _ = st.columns([1, 2, 1, 2, 1])
+    _, col1, _, col2, _ = st.columns([1, 2, 1, 2, 1], vertical_alignment="center")
     with col1:
         # Total Cost Metric
         total_cost = (data_df["quantity"] * data_df["buy_price_per_unit"]).sum()
         st.metric(
-            "Total Portfolio Cost", f"{total_cost:,.0f} {base_currency}", border=True
+            "Portfolio Capital", f"{total_cost:,.0f} {base_currency}", border=True
         )
 
         # Total Value Metric
@@ -294,7 +294,7 @@ def display_portfolio_aggregate() -> None:
                 border=True,
             )
         else:
-            st.metric("Total Portfolio Value", "NA", border=True)
+            st.metric("Estimated Portfolio Value", "NA", border=True)
 
         # Overall P/L % Metric
         overall_gain_loss_percentage = (
@@ -331,7 +331,7 @@ def display_portfolio_aggregate() -> None:
                 textprops={"fontsize": 8},
             )
             ax.axis("equal")
-            st.pyplot(fig, use_container_width=True)
+            st.pyplot(fig, width="stretch")
 
     st.space(size="small")
 
@@ -466,7 +466,14 @@ def get_current_value() -> None:
         with st.spinner("Running Price Pulse Agent..."):
             try:
                 price_pulse_state = load_price_pulse_state()
-                price_pulse_graph = PricePulseGraph().contruct_graph().compile()
+                price_pulse_graph = (
+                    PricePulseGraph(
+                        model_name=st.session_state["app_config"]["llm_model_name"],
+                        is_local_llm=st.session_state["app_config"]["use_local_llm"],
+                    )
+                    .contruct_graph()
+                    .compile()
+                )
                 thread = {"configurable": {"thread_id": random.randint(0, 9999)}}
 
                 # Run the price pulse agent and stream results
@@ -542,7 +549,14 @@ def get_latest_asset_news() -> None:
         with st.spinner("Running Asset News Agent..."):
             try:
                 asset_news_state = load_asset_news_state()
-                asset_news_graph = AssetNewsGraph().contruct_graph().compile()
+                asset_news_graph = (
+                    AssetNewsGraph(
+                        model_name=st.session_state["app_config"]["llm_model_name"],
+                        is_local_llm=st.session_state["app_config"]["use_local_llm"],
+                    )
+                    .contruct_graph()
+                    .compile()
+                )
                 thread = {"configurable": {"thread_id": random.randint(0, 9999)}}
 
                 # Run the asset news agent and stream results
@@ -622,7 +636,14 @@ def get_fed_watch_result() -> None:
                 fed_watch_state = FedWatchState(
                     assets=st.session_state.get("unique_assets")["asset"].tolist()
                 )
-                fed_watch_graph = FedWatchGraph().contruct_graph().compile()
+                fed_watch_graph = (
+                    FedWatchGraph(
+                        model_name=st.session_state["app_config"]["llm_model_name"],
+                        is_local_llm=st.session_state["app_config"]["use_local_llm"],
+                    )
+                    .contruct_graph()
+                    .compile()
+                )
                 thread = {"configurable": {"thread_id": random.randint(0, 9999)}}
 
                 # Run the fed watch agent and stream results

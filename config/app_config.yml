@@ -1,1 +1,3 @@
 base_currency: SGD
+use_local_llm: False
+llm_model_name: gpt-5-mini

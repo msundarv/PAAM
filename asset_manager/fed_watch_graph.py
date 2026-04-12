@@ -5,6 +5,7 @@ from typing import List
 from .data_models import FedWatchInfo
 from .tools import load_search_tool
 from langchain_openai import ChatOpenAI
+from langchain_ollama import ChatOllama
 from langgraph.graph import MessagesState
 from langgraph.graph import START, END, StateGraph
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -41,10 +42,21 @@ class FedWatchGraph:
         self,
         instructions_yml_file: str = CONFIG_DIR / "instructions.yml",
         model_name: str = "gpt-5-mini",
+        is_local_llm: bool = False,
     ):
+        """
+        Initializes the FedWatchGraph.
+        Args:
+            instructions_yml_file (str): Path to the YAML file containing instructions.
+            model_name (str): The name of the language model to use.
+            is_local_llm (bool): Flag indicating whether to use a local LLM or not. Defaults to False.
+        """
         self.load_instructions(instructions_yml_file)
         self.load_tools()
-        self.llm = ChatOpenAI(model=model_name, temperature=0)
+        if not is_local_llm:
+            self.llm = ChatOpenAI(model=model_name, temperature=0)
+        else:
+            self.llm = ChatOllama(model=model_name, temperature=0)
         return None
 
     def load_instructions(self, instructions_yml_file: str) -> None:

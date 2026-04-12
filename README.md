@@ -15,7 +15,7 @@ pip install -r requirements.txt
 
 1. Create a `.env` file in the project root directory by copying `.env.example` and adding your required API keys and credentials.
 2. Define your assets in `/data/my_assets.yml` following the schema provided in the example file `sample_assets.yml`.
-3. App specific config like base currency can be configured in `/config/app_config.yml`.
+3. App specific config like llm selection, base currency can be configured in `/config/app_config.yml`.
 
 ## Quick Start
 
