@@ -281,20 +281,18 @@ def display_portfolio_aggregate() -> None:
     with col1:
         # Total Cost Metric
         total_cost = (data_df["quantity"] * data_df["buy_price_per_unit"]).sum()
-        st.metric(
-            "Portfolio Capital", f"{total_cost:,.0f} {base_currency}", border=True
-        )
+        st.metric("Invested Value", f"{total_cost:,.0f} {base_currency}", border=True)
 
         # Total Value Metric
         if st.session_state.get("is_pulse_agent_completed"):
             total_value = (data_df["quantity"] * data_df["current_unit_price"]).sum()
             st.metric(
-                "Total Portfolio Value",
+                "Estimated Value",
                 f"{total_value:,.0f} {base_currency}",
                 border=True,
             )
         else:
-            st.metric("Estimated Portfolio Value", "NA", border=True)
+            st.metric("Estimated Value", "NA", border=True)
 
         # Overall P/L % Metric
         overall_gain_loss_percentage = (
