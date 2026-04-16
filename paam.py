@@ -287,12 +287,12 @@ def display_portfolio_aggregate() -> None:
         if st.session_state.get("is_pulse_agent_completed"):
             total_value = (data_df["quantity"] * data_df["current_unit_price"]).sum()
             st.metric(
-                "Estimated Value",
+                "Estimated Current Value",
                 f"{total_value:,.0f} {base_currency}",
                 border=True,
             )
         else:
-            st.metric("Estimated Value", "NA", border=True)
+            st.metric("Estimated Current Value", "NA", border=True)
 
         # Overall P/L % Metric
         overall_gain_loss_percentage = (
@@ -310,7 +310,7 @@ def display_portfolio_aggregate() -> None:
             border=True,
         )
 
-    with col2:
+    with col2.container(border=True):
 
         # Asset class distribution pie chart
         if not data_df.empty:

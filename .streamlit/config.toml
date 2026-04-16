@@ -1,0 +1,21 @@
+# Ref: https://github.com/jmedia65/awesome-streamlit-themes
+
+[theme]
+# 🌆 SYNTHWAVE COLOR PALETTE 🌆
+primaryColor = "#ff0080"             # Hot pink/magenta - classic synthwave
+backgroundColor = "#0a0a0f"          # Deep dark purple-black
+secondaryBackgroundColor = "#1a1a2e" # Dark navy with purple tint
+textColor = "#00ffff"                # Cyan - that retro computer green-blue
+linkColor = "#ff0080"                # Hot pink for links
+borderColor = "#ff6b00"              # Electric orange borders
+showWidgetBorder = true
+baseRadius = "0.2rem"                # Sharp, angular - very 80s
+font = "Orbitron"                    # Futuristic for body text
+headingFont = "Orbitron"             # Same for headings - consistent sci-fi
+codeFont = "SourceCodePro"           # Monospace for that terminal feel
+codeBackgroundColor = "#16213e"      # Dark blue-purple for code blocks
+showSidebarBorder = true
+
+[theme.sidebar]
+backgroundColor = "#16213e"          # Darker blue-purple
+secondaryBackgroundColor = "#1a1a2e" # Slightly lighter sections
